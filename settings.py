@@ -30,7 +30,7 @@ def init():
     global keys
 
     # variables to be changed
-    version = 20161125.01
+    version = 20161125.02
     irc_channel_bot = '#newsgrabberbot'
     irc_channel_main = '#newsgrabber'
     irc_nick = 'newsbuddy'
