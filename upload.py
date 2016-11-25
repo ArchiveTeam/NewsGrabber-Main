@@ -50,8 +50,11 @@ class Upload(threading.Thread):
                 while not settings.upload_running:
                     time.sleep(1)
                 if not f.endswith('-deduplicated.warc.gz'):
-                    deduplicated_warc = Deduplicate(os.path.join(settings.dir_ready, f))
-                    deduplicated_warc.deduplicate()
+                    try:
+                        deduplicated_warc = Deduplicate(os.path.join(settings.dir_ready, f))
+                        deduplicated_warc.deduplicate()
+                    except:
+                        pass # bad WARC? (?)
                     continue
                 time.sleep(1)
                 while self.concurrent_uploads > settings.max_concurrent_uploads or not self.upload_allowed():
