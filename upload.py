@@ -82,14 +82,8 @@ class Upload(threading.Thread):
                 threading.Thread(target=self.upload_single, args=(name, f, ia_args)).start()
 
     def upload_single(self, name, f, ia_args):
-        if not f.endswith('-deduplicated.warc.gz'):
-            deduplicated_warc = Deduplicate(os.path.join(settings.dir_ready, f))
-            deduplicated_warc.deduplicate()
-            files = [deduplicated_warc.output_filename,
-              deduplicated_warc.output_log_filename]
-        else:
-            files = [f_ for f_ in [os.path.join(settings.dir_ready, f),
-                os.path.join(settings.dir_ready, f[:-8]+'.log')] if os.path.isfile(f_)]
+        files = [f_ for f_ in [os.path.join(settings.dir_ready, f),
+            os.path.join(settings.dir_ready, f[:-8]+'.log')] if os.path.isfile(f_)]
 
         with open(settings.keys, 'r') as keys:
             access_key, secret_key = keys.read().strip().split(':')

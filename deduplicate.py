@@ -13,11 +13,9 @@ class Deduplicate(object):
         self.input_file_size = os.path.getsize(self.input_filename)
 
         self.output_filename = self.input_filename[:-8] + '-deduplicated.warc.gz'
-        open(self.output_filename+'.upload', 'w').close()
         self.output_file = warc.WARCFile(self.output_filename, 'w')
 
         self.output_log_filename = self.input_filename[:-8] + '-deduplicated.log'
-        open(self.output_log_filename+'.upload', 'w').close()
         self.output_log = []
 
     def deduplicate(self):
@@ -49,12 +47,9 @@ class Deduplicate(object):
 
         if self.double_check(self.input_filename):
             os.remove(self.input_filename)
-            os.remove(self.input_filename+'.upload')
         else:
             os.remove(self.output_filename)
             os.remove(self.output_log_filename)
-            os.remove(self.output_filename+'.upload')
-            os.remove(self.output_log_filename+'.upload')
 
     def deduplicate_record(self, record):
         record_check = self.check_record(record)
