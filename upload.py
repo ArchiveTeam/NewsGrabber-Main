@@ -6,6 +6,7 @@ import re
 
 import file
 import settings
+from deduplicate import Deduplicate
 
 import internetarchive
 import requests
@@ -70,34 +71,48 @@ class Upload(threading.Thread):
                     self.uploads[f]['item_size'] = self.items[self.uploads[f]['date']]['item_size']
                 name = self.uploads[f]['date']+'_'+str(self.uploads[f]['item_num']).zfill(4)
                 ia_args = {'title': 'Archive Team Newsgrab: {name}'.format(name=name),
-                           'mediatype': 'web',
-                           'description': 'A collection of news articles grabbed from a wide variety of sources around the world automatically by Archive Team scripts.',
-                           'collection': 'archiveteam_newssites',
-                           'date': date}
+                    'mediatype': 'web',
+                    'description': 'A collection of news articles grabbed from a wide variety of sources around the world automatically by Archive Team scripts.',
+                    'collection': 'archiveteam_newssites',
+                    'date': date}
                 threading.Thread(target=self.upload_single, args=(name, f, ia_args)).start()
 
     def upload_single(self, name, f, ia_args):
+        if not f.endswith('-deduplicated.warc.gz'):
+            deduplicated_warc = Deduplicate(os.path.join(settings.dir_ready, f))
+            deduplicated_warc.deduplicate()
+            files = [deduplicated_warc.output_filename,
+              deduplicated_warc.output_log_filename]
+        else:
+            files = [f_ for f_ in [os.path.join(settings.dir_ready, f),
+                os.path.join(settings.dir_ready, f[:-8]+'.log')] if os.path.isfile(f_)]
+
         with open(settings.keys, 'r') as keys:
             access_key, secret_key = keys.read().strip().split(':')
-        try:
-            internetarchive.upload('archiveteam_newssites_{name}'.format(name=name),
-                os.path.join(settings.dir_ready, f),
-                metadata=ia_args,
-                access_key=access_key,
-                secret_key=secret_key,
-                queue_derive=True,
-                verify=True,
-                verbose=True,
-                delete=True,
-                retries=10,
-                retries_sleep=300)
-        except:
-            pass # see code below
-        self.concurrent_uploads -= 1
-        os.remove(os.path.join(settings.dir_ready, f+'.upload'))
-        if os.path.isfile(os.path.join(settings.dir_ready, f)):
-            settings.irc_bot.send('PRIVMSG', '{name} uploaded unsuccessful.'.format(
-                name=f), settings.irc_channel_bot)
+
+        for f_ in files:
+            try:
+                internetarchive.upload('archiveteam_newssites_{name}'.format(name=name),
+                    f_,
+                    metadata=ia_args,
+                    access_key=access_key,
+                    secret_key=secret_key,
+                    queue_derive=True,
+                    verify=True,
+                    verbose=True,
+                    delete=True,
+                    retries=10,
+                    retries_sleep=300)
+            except:
+                pass # see code below
+
+            self.concurrent_uploads -= 1
+            if os.path.isfile(f_+'.upload'):
+                os.remove(f_+'.upload')
+
+            if os.path.isfile(f_):
+                settings.irc_bot.send('PRIVMSG', '{name} uploaded unsuccessful.'
+                    .format(name=f_), settings.irc_channel_bot)
 
     def upload_allowed(self):
         with open(settings.keys, 'r') as keys:
