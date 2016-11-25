@@ -16,8 +16,8 @@ class Deduplicate(object):
         open(self.output_filename+'.upload', 'w').close()
         self.output_file = warc.WARCFile(self.output_filename, 'w')
 
-        open(self.output_log_filename+'.upload', 'w').close()
         self.output_log_filename = self.input_filename[:-8] + '-deduplicated.log'
+        open(self.output_log_filename+'.upload', 'w').close()
         self.output_log = []
 
     def deduplicate(self):
