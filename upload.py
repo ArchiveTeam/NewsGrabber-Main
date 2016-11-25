@@ -49,6 +49,10 @@ class Upload(threading.Thread):
                         and not os.path.isfile(os.path.join(settings.dir_ready, f+'.upload'))]:
                 while not settings.upload_running:
                     time.sleep(1)
+                if not f.endswith('-deduplicated.warc.gz'):
+                    deduplicated_warc = Deduplicate(os.path.join(settings.dir_ready, f))
+                    deduplicated_warc.deduplicate()
+                    continue
                 time.sleep(1)
                 while self.concurrent_uploads > settings.max_concurrent_uploads or not self.upload_allowed():
                     time.sleep(10)
