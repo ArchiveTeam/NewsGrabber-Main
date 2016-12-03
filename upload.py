@@ -49,12 +49,13 @@ class Upload(threading.Thread):
                         and not os.path.isfile(os.path.join(settings.dir_ready, f+'.upload'))]:
                 while not settings.upload_running:
                     time.sleep(1)
-                if not f.endswith('-deduplicated.warc.gz'):
+                if os.path.getsize(os.path.join(settings.dir_ready, f)) < 1073741824 \
+                      and not f.endswith('-deduplicated.warc.gz'):
                     try:
                         deduplicated_warc = Deduplicate(os.path.join(settings.dir_ready, f))
                         deduplicated_warc.deduplicate()
                     except:
-                        pass # bad WARC? (?)
+                        pass # bad WARC (?)
                     continue
                 time.sleep(1)
                 while self.concurrent_uploads > settings.max_concurrent_uploads or not self.upload_allowed():
@@ -111,7 +112,7 @@ class Upload(threading.Thread):
             if os.path.isfile(f_+'.upload'):
                 os.remove(f_+'.upload')
 
-            if os.path.isfile(f_):
+            if os.path.isfile(f_) and for f_.endswith('.log'):
                 settings.irc_bot.send('PRIVMSG', '{name} uploaded unsuccessful.'
                     .format(name=f_), settings.irc_channel_bot)
 
