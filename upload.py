@@ -112,7 +112,7 @@ class Upload(threading.Thread):
             if os.path.isfile(f_+'.upload'):
                 os.remove(f_+'.upload')
 
-            if os.path.isfile(f_) and for f_.endswith('.log'):
+            if os.path.isfile(f_) and not f_.endswith('.log'):
                 settings.irc_bot.send('PRIVMSG', '{name} uploaded unsuccessful.'
                     .format(name=f_), settings.irc_channel_bot)
 
