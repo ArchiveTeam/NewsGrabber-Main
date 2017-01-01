@@ -170,6 +170,9 @@ class Urls(threading.Thread):
         runs = 0
         while True:
             for f in os.listdir(settings.dir_new_urllists):
+                if f.startswith('.') or os.path.getsize(os.path.join(
+                      settings.dir_new_urllists, f)) == 0:
+                    continue
                 while not settings.get_urls_running:
                     time.sleep(1)
                 urls_new_count = 0
