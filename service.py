@@ -159,50 +159,57 @@ class Urls(threading.Thread):
         self.url_count = 0
         self.urls_video = []
         self.urls_normal = []
+        self.warriorfiles = []
         self.targets = file.File(settings.targets)
         self.grab_files = {}
         self.running = True
 
-    def run(self):
-        self.get_urls_new()
+        if not os.path.isdir('warriorlists'):
+            os.makedirs('warriorlists')
 
-    def get_urls_new(self):
+    def run(self):
+        self.load_warrior_files()
         runs = 0
         while True:
-            for f in os.listdir(settings.dir_new_urllists):
-                if f.startswith('.') or os.path.getsize(os.path.join(
-                      settings.dir_new_urllists, f)) == 0:
-                    continue
-                while not settings.get_urls_running:
-                    time.sleep(1)
-                urls_new_count = 0
-                urls_new = json.load(open(os.path.join(
-                    settings.dir_new_urllists, f)))
-                for url in urls_new:
-                    if url['service'] in settings.services \
-                          and not url['url'] in [u['url'] for u in \
-                          settings.services[url['service']].service_log_urls]:
-                        if not url['live']:
-                            settings.services[url['service']].service_log_urls.append(
-                                url)
-                        self.add_url(url)
-                        urls_new_count += 1
-                    elif not url['service'] in settings.services \
-                          and not url in self.urls_video + self.urls_normal:
-                        self.add_url(url)
-                        urls_new_count += 1
-                self.count(urls_new_count)
-                settings.logger.log('Loaded {urls} URL(s) from file {f}'.format(
-                        urls=urls_new_count, f=f))
-                os.rename(os.path.join(settings.dir_new_urllists, f),
-                        os.path.join(settings.dir_old_urllists, f))
+            self.get_urls_new()
             runs += 1
             if runs%15 == 0:
                 self.report_urls()
             if runs == 60:
                 self.distribute_urls()
                 runs = 0
-            time.sleep(60)
+            time.sleep(1)
+
+    def load_warrior_files(self):
+        self.warrior_files = os.listdir('warriorlists')
+
+    def get_urls_new(self):
+        for f in os.listdir(settings.dir_new_urllists):
+            if f.startswith('.') or os.path.getsize(os.path.join(
+                  settings.dir_new_urllists, f)) == 0:
+                continue
+            while not settings.get_urls_running:
+                time.sleep(1)
+            urls_new_count = 0
+            urls_new = json.load(open(os.path.join(
+                settings.dir_new_urllists, f)))
+            for url in urls_new:
+                if url['service'] in settings.services \
+                      and not url['url'] in \
+                      settings.services[url['service']].service_log_urls:
+                    if not url['live']:
+                        settings.services[url['service']].add_new_url(url)
+                    self.add_url(url)
+                    urls_new_count += 1
+                elif not url['service'] in settings.services \
+                      and not url in self.urls_video + self.urls_normal:
+                    self.add_url(url)
+                    urls_new_count += 1
+            self.count(urls_new_count)
+            settings.logger.log('Loaded {urls} URL(s) from file {f}'.format(
+                    urls=urls_new_count, f=f))
+            os.rename(os.path.join(settings.dir_new_urllists, f),
+                    os.path.join(settings.dir_old_urllists, f))
 
     def report_urls(self):
         settings.irc_bot.send('PRIVMSG', '{urls} URLs added in the last 15 minutes.'.format(
@@ -223,19 +230,31 @@ class Urls(threading.Thread):
              {'sort': '',
              'list': urls_normal}]
         for list_ in lists:
-            grab_targets = self.get_grab_targets()
-            urls_lists = tools.splitlist(list_['list'], len(grab_targets))
-            for i, target in enumerate(grab_targets):
-                filename = '{name}{sort}_temp_{i}_{timestamp}'.format(
-                    name=target['name'], sort=list_['sort'], i=i,
-                    timestamp=time.time())
-                self.grab_files[i] = file.File(filename)
-                self.grab_files[i].write_json({'urls': urls_lists[i], 'nick': target['name']})
-                exit = os.system('rsync -avz --no-o --no-g --progress --remove-source-files {filename} {target}'.format(
-                    filename=filename, target=target['rsync']))
-                if exit != 0:
-                    settings.irc_bot.send('PRIVMSG', 'URLslist {filename} failed to sync.'.format(
-                        **locals()), settings.irc_channel_bot)
+            for i in range(len(list_['list'])/10):
+                filename = 'warrior{sort}_{i}_{timestamp}'.format(
+                    sort=list_['sort'], i=i, timestamp=str(time.time()))
+                self.warriorfiles.append('newsbuddy:' + filename)
+                with open(os.path.join('warriorlists', filename), 'w') as f:
+                    f.write('\n'.join(list_['list'][i*10:(i+1)*10]))
+        if not tools.to_tracker(self.warriorfiles):
+            settings.irc_bot.send('PRIVMSG',
+                                  'Warriorlists failed to upload to tracker.',
+                                  settings.irc_channel_bot)
+        else:
+            self.warriorfiles = []
+        
+            #grab_targets = self.get_grab_targets()
+            #urls_lists = tools.splitlist(list_['list'], len(grab_targets))
+            #for i, target in enumerate(grab_targets):
+            #    filename = '{name}{sort}_temp_{i}_{timestamp}'.format(
+            #        name=target['name'], sort=list_['sort'], i=i,
+            #        timestamp=time.time())
+            #    self.grab_files[i] = file.File(filename)
+            #    self.grab_files[i].write_json({'urls': urls_lists[i], 'nick': target['name']})
+            #    exit = os.system('rsync -avz --no-o --no-g --progress --remove-source-files {filename} {target}'.format(
+            #        filename=filename, target=target['rsync']))
+            #    if exit != 0:
+            #        
 
     def count(self, i):
         self.url_count += i
@@ -272,7 +291,7 @@ class Service(threading.Thread):
         self.service_regex_live = None
         self.service_version = None
         self.service_wikidata = None
-        self.service_log_urls = []
+        self.service_log_urls = {}
         self.service_file_log_urls = file.File(os.path.join(settings.dir_donefiles, self.service_name))
         self.service_urls_age = time.time()
 
@@ -313,6 +332,6 @@ class Service(threading.Thread):
         except:
             self.service_wikidata = None
 
-    def get_new_url(self, url):
-        if not url in self.service_log_urls:
-            self.service_log_urls.append(url)
+    def add_new_url(self, url):
+        if not url['url'] in self.service_log_urls:
+            self.service_log_urls[url['url']] = url

@@ -27,9 +27,12 @@ def main():
     tools.create_dir(settings.dir_dumped_url_data)
 
     if not os.path.isfile(settings.targets):
-        settings.logger.log("Please add one or more rsync targets to file '{targets}'".format(targets=settings.targets), 'ERROR')
+        settings.logger.log("Please add one or more rsync targets to file " \
+                            "'{targets}'".format(targets=settings.targets),
+                            'ERROR')
     if not os.path.isfile(settings.keys):
-        settings.logger.log("Please add you keys by running 'add_keys.py'.", 'ERROR')
+        settings.logger.log("Please add you keys by running 'add_keys.py'.",
+                            'ERROR')
 
     settings.irc_bot = irc.IRC()
     settings.irc_bot.daemon = True
