@@ -178,7 +178,7 @@ class Urls(threading.Thread):
             if runs == 60:
                 self.distribute_urls()
                 runs = 0
-            time.sleep(1)
+            time.sleep(60)
 
     def load_warrior_files(self):
         self.warrior_files = os.listdir('warriorlists')

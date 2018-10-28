@@ -13,7 +13,7 @@ def main():
     if os.path.isfile('UPDATE'):
         os.remove('UPDATE')
 
-    settings.init()
+#    settings.init()
     settings.logger = log.Log(settings.log_file_name)
     settings.logger.daemon = True
     settings.logger.start()

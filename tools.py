@@ -21,4 +21,6 @@ def create_dir(name):
         settings.logger.log("Created directory '{name}'".format(name=name))
 
 def to_tracker(l):
-    pass
+    r = requests.post('http://tracker.archiveteam.org/newsgrabber/rescue-me',
+                      data={'items': '\n'.join(l)})
+    return r.status_code == 200
